@@ -83,7 +83,7 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 		}
 
 		redirect_url, err = db.GetLongURL(h.pool, r.Context(), code)
-		if errors.Is(err, errors.New("link not found")) {
+		if errors.Is(err, db.ErrNotFound) {
 			http.NotFound(w, r)
 			return
 		}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 	"github.com/jackc/pgx/v5"
@@ -15,6 +16,7 @@ import (
 	"short.ly/shortcode"
 )
 
+var ErrNotFound = errors.New("link not found")
 
 // Connect opens a connection pool to url and checks the database is reachable
 func Connectpsql(ctx context.Context, url string) (*pgxpool.Pool, error) {
@@ -40,7 +42,12 @@ func CreateLink(pool *pgxpool.Pool , ctx context.Context, longURL string) (strin
 	if err := godotenv.Load(); err != nil {
 		log.Println("Failed Loading .env variables", err)
 	}
-	for range os.Getenv("CODE_MAX_RETRIES") {
+	retires , err := strconv.Atoi(os.Getenv("CODE_MAX_RETRIES"))
+	if err != nil {
+		log.Fatal("Not able to read max_retries from .env. Using fallback")
+		retires = 5
+	}
+	for range retires {
 		code, err := shortcode.GenerateCode(shortcode.CodeLength)
 		if err != nil {
 			return "", err
@@ -69,7 +76,7 @@ func GetLongURL(pool *pgxpool.Pool, ctx context.Context, code string) (string, e
 	var long_url string
 	err := pool.QueryRow(ctx, `SELECT long_url FROM shortlinks WHERE code = $1`, code).Scan(&long_url)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", errors.New("link not found")
+		return "", ErrNotFound
 	}
 	if err != nil {
 		return "", err

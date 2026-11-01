@@ -6,3 +6,4 @@ go.work.sum
 /server
 /bin/
 *.md
+.env.docker
