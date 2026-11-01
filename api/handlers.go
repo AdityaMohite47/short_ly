@@ -13,12 +13,6 @@ import (
 	"short.ly/db"
 )
 
-type Handler struct {
-	pool      *pgxpool.Pool
-	cache     *redis.Client
-	cache_ttl time.Duration
-}
-
 type ShortenRequest struct {
 	URL string `json:"url"`
 }
@@ -31,6 +25,12 @@ type RedirectResponse struct {
 	URL string `json:"url"`
 }
 
+type Handler struct {
+	pool      *pgxpool.Pool
+	cache     *redis.Client
+	cache_ttl time.Duration
+}
+
 func NewHandler(p *pgxpool.Pool, c *redis.Client) *Handler {
 	c_ttl, err := db.CacheTTL()
 	if err != nil {
@@ -41,6 +41,13 @@ func NewHandler(p *pgxpool.Pool, c *redis.Client) *Handler {
 		cache:     c,
 		cache_ttl: c_ttl,
 	}
+}
+
+func (h *Handler) Routes() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /shorten", h.Shorten)
+	mux.HandleFunc("GET /{code}", h.Redirect)
+	return mux
 }
 
 func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +83,7 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 		}
 
 		redirect_url, err = db.GetLongURL(h.pool, r.Context(), code)
-		if errors.Is(err, db.ErrNotFound) {
+		if errors.Is(err, errors.New("link not found")) {
 			http.NotFound(w, r)
 			return
 		}

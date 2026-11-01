@@ -5,3 +5,4 @@ go.work.sum
 /short.ly
 /server
 /bin/
+*.md

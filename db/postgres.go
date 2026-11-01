@@ -35,8 +35,6 @@ func Connectpsql(ctx context.Context, url string) (*pgxpool.Pool, error) {
 }
 
 
-var ErrNotFound = errors.New("link not found")
-
 // CreateLink saves a long URL under a freshly generated random code and returns the code
 func CreateLink(pool *pgxpool.Pool , ctx context.Context, longURL string) (string, error) {
 	if err := godotenv.Load(); err != nil {
@@ -71,7 +69,7 @@ func GetLongURL(pool *pgxpool.Pool, ctx context.Context, code string) (string, e
 	var long_url string
 	err := pool.QueryRow(ctx, `SELECT long_url FROM shortlinks WHERE code = $1`, code).Scan(&long_url)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", ErrNotFound
+		return "", errors.New("link not found")
 	}
 	if err != nil {
 		return "", err
